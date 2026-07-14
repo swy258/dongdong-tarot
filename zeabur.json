@@ -1,0 +1,25 @@
+{
+  "services": [
+    {
+      "name": "dongdong-tarot-api",
+      "type": "python",
+      "rootDirectory": "backend",
+      "buildCommand": "pip install -r requirements-light.txt",
+      "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port 8080",
+      "port": 8080,
+      "env": {
+        "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}"
+      }
+    },
+    {
+      "name": "dongdong-tarot-web",
+      "type": "static",
+      "rootDirectory": "frontend",
+      "buildCommand": "npm install && npm run build",
+      "outputDirectory": "dist",
+      "env": {
+        "VITE_API_BASE_URL": "${ZEABUR_DOMAIN_API}"
+      }
+    }
+  ]
+}
