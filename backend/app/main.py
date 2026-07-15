@@ -1,6 +1,5 @@
 """FastAPI 主入口"""
 import os
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,22 +40,17 @@ def init_db():
         db.close()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """应用生命周期"""
-    print("[DongDongTarot] Starting up...")
-    init_db()
-    print("[DongDongTarot] Database initialized.")
-    yield
-    print("[DongDongTarot] Shutting down...")
-
-
 app = FastAPI(
     title="东东塔罗 API",
     description="塔罗牌占卜网站 - 结合AI与经典塔罗文献的智能解读系统",
     version="1.0.0",
-    lifespan=lifespan,
 )
+
+# WSGI 模式下 lifespan 不会触发，在模块加载时初始化数据库
+try:
+    init_db()
+except Exception as e:
+    print(f"[DongDongTarot] DB init warning: {e}")
 
 # 静态文件目录
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
