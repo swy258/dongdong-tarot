@@ -5,8 +5,12 @@ import ssl
 from pathlib import Path
 from typing import List
 
-import fitz  # PyMuPDF
 import numpy as np
+
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
 
 from app.config import settings
 
@@ -114,6 +118,9 @@ class RAGService:
 
     def _build_from_pdfs(self):
         """从所有PDF提取文本并向量化"""
+        if fitz is None:
+            print("PyMuPDF not installed, skipping PDF extraction.")
+            return
         books_dir = Path(settings.BOOKS_DIR)
         if not books_dir.exists():
             print(f"Books directory not found: {settings.BOOKS_DIR}")
