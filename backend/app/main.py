@@ -95,18 +95,6 @@ for alt in [
 if os.path.exists(STATIC_DIR) and os.path.exists(os.path.join(STATIC_DIR, "index.html")):
     app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
 
-    # 非API请求返回SPA入口
-    @app.middleware("http")
-    async def spa_fallback(request, call_next):
-        # API路由正常处理
-        if request.url.path.startswith("/api/"):
-            return await call_next(request)
-        # 静态资源
-        static_file = os.path.join(STATIC_DIR, request.url.path.lstrip("/"))
-        if os.path.isfile(static_file):
-            return FileResponse(static_file)
-        # SPA fallback
-        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 else:
     @app.get("/")
     def root():
@@ -115,3 +103,17 @@ else:
             "version": "1.0.0",
             "docs": "/docs",
         }
+
+
+# 兜底路由：非 /api/ 的 GET 请求返回 index.html
+@app.get("/{path:path}")
+async def spa_catchall(path: str):
+    import os as _os
+    static_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "static")
+    if not _os.path.exists(static_dir):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"name": "东东塔罗 API", "version": "1.0.0"})
+    file_path = _os.path.join(static_dir, path)
+    if path and _os.path.isfile(file_path):
+        return FileResponse(file_path)
+    return FileResponse(_os.path.join(static_dir, "index.html"))
