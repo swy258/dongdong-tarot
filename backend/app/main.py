@@ -1,14 +1,10 @@
 """FastAPI 主入口"""
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 from app.database import engine, Base, SessionLocal
-from app.config import settings
 from app.models import User, Card, Spread, Reading
 from app.routers import auth, cards, spreads, readings
 from app.services.seed_data import get_card_seed_data, get_preset_spreads
@@ -81,39 +77,10 @@ def health_check():
     return {"status": "ok", "message": "东东塔罗服务运行正常"}
 
 
-# 前端静态文件 - 多路径兜底
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(_current_dir, "static")
-# PythonAnywhere 环境下尝试其他路径
-for alt in [
-    os.path.join(os.path.dirname(_current_dir), "app", "static"),
-    os.path.join(os.path.dirname(os.path.dirname(_current_dir)), "backend", "app", "static"),
-]:
-    if not os.path.exists(STATIC_DIR) and os.path.exists(alt):
-        STATIC_DIR = alt
-
-if os.path.exists(STATIC_DIR) and os.path.exists(os.path.join(STATIC_DIR, "index.html")):
-    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
-
-else:
-    @app.get("/")
-    def root():
-        return {
-            "name": "东东塔罗 API",
-            "version": "1.0.0",
-            "docs": "/docs",
-        }
-
-
-# 兜底路由：非 /api/ 的 GET 请求返回 index.html
-@app.get("/{path:path}")
-async def spa_catchall(path: str):
-    import os as _os
-    static_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "static")
-    if not _os.path.exists(static_dir):
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"name": "东东塔罗 API", "version": "1.0.0"})
-    file_path = _os.path.join(static_dir, path)
-    if path and _os.path.isfile(file_path):
-        return FileResponse(file_path)
-    return FileResponse(_os.path.join(static_dir, "index.html"))
+@app.get("/")
+def root():
+    return {
+        "name": "东东塔罗 API",
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
