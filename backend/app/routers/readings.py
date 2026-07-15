@@ -112,34 +112,28 @@ async def interpret_reading(
     db: Session = Depends(get_db),
     authorization: str | None = Header(None),
 ):
-    """流式返回AI解读"""
+    """返回AI解读（非流式，兼容WSGI）"""
+    from fastapi.responses import Response
+
     user_id = get_user_id_from_header(authorization)
     reading = db.query(Reading).filter(Reading.id == reading_id).first()
     if not reading:
         raise HTTPException(status_code=404, detail="占卜记录不存在")
 
-    # 验证权限
     if reading.user_id and reading.user_id != user_id:
         raise HTTPException(status_code=403, detail="无权访问此占卜记录")
 
     spread = db.query(Spread).filter(Spread.id == reading.spread_id).first()
     cards_drawn = json.loads(reading.cards_drawn)
 
-    # RAG搜索相关书籍内容
     drawn_card_names = [c["card_name"] for c in cards_drawn]
     book_context = rag_service.search(reading.question, drawn_card_names)
 
-    # 收集完整解读内容
-    full_interpretation_parts = []
-
-    async def generate():
-        full_text = ""
-        try:
-            if not settings.DEEPSEEK_API_KEY:
-                yield "⚠️ DeepSeek API Key 未配置。请在 backend/.env 文件中设置 DEEPSEEK_API_KEY。\n\n"
-                yield "以下为示例占位解读内容..."
-                return
-
+    full_text = ""
+    try:
+        if not settings.DEEPSEEK_API_KEY:
+            full_text = "⚠️ DeepSeek API Key 未配置。请在 backend/.env 文件中设置 DEEPSEEK_API_KEY。"
+        else:
             async for chunk in stream_reading(
                 reading.question,
                 spread.name,
@@ -148,33 +142,30 @@ async def interpret_reading(
                 book_context,
             ):
                 full_text += chunk
-                yield chunk
 
-            # 解读完成后，保存到数据库，同时生成分享摘要
-            reading.interpretation = full_text
+        # 保存到数据库
+        reading.interpretation = full_text
+        db.commit()
+
+        # 生成分享摘要
+        try:
+            summary = await gen_share_summary(
+                question=reading.question,
+                spread_name=spread.name if spread else "牌阵",
+                cards_drawn=cards_drawn,
+                full_interpretation=full_text,
+            )
+            reading.share_summary = summary
             db.commit()
-
-            # 异步生成分享摘要（后台任务，不阻塞流式返回）
-            try:
-                summary = await gen_share_summary(
-                    question=reading.question,
-                    spread_name=spread.name if spread else "牌阵",
-                    cards_drawn=cards_drawn,
-                    full_interpretation=full_text,
-                )
-                reading.share_summary = summary
-                db.commit()
-            except Exception as e:
-                print(f"Share summary generation failed: {e}")
-
         except Exception as e:
-            error_msg = f"\n\n⚠️ 解读过程中出现错误：{str(e)}"
-            yield error_msg
-            full_text += error_msg
-            reading.interpretation = full_text
-            db.commit()
+            print(f"Share summary generation failed: {e}")
 
-    return StreamingResponse(generate(), media_type="text/plain; charset=utf-8")
+    except Exception as e:
+        full_text = f"解读过程中出现错误：{str(e)}"
+        reading.interpretation = full_text
+        db.commit()
+
+    return Response(content=full_text, media_type="text/plain; charset=utf-8")
 
 
 @router.post("/{reading_id}/share-summary")
