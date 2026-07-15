@@ -11,7 +11,7 @@ class Reading(Base):
     __tablename__ = "readings"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
     spread_id: Mapped[int] = mapped_column(Integer, ForeignKey("spreads.id"), nullable=False)
     question: Mapped[str] = mapped_column(Text, nullable=False)
     # JSON: [{"position":1,"position_name":"过去","card_name":"愚者","is_reversed":false}]
