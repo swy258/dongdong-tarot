@@ -1,8 +1,11 @@
 """FastAPI 主入口"""
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.database import engine, Base, SessionLocal
 from app.config import settings
@@ -73,15 +76,29 @@ app.include_router(spreads.router)
 app.include_router(readings.router)
 
 
-@app.get("/")
-def root():
-    return {
-        "name": "东东塔罗 API",
-        "version": "1.0.0",
-        "docs": "/docs",
-    }
-
-
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "message": "东东塔罗服务运行正常"}
+
+
+# 前端静态文件
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+    app.mount("/favicon.svg", StaticFiles(directory=STATIC_DIR), name="favicon")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # 所有非API路由返回 index.html（SPA）
+        file_path = os.path.join(STATIC_DIR, full_path) if full_path else ""
+        if full_path and os.path.exists(file_path) and not os.path.isdir(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+else:
+    @app.get("/")
+    def root():
+        return {
+            "name": "东东塔罗 API",
+            "version": "1.0.0",
+            "docs": "/docs",
+        }
