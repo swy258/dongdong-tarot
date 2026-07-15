@@ -2,7 +2,6 @@
 import os
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app.database import engine, Base, SessionLocal
@@ -52,15 +51,6 @@ except Exception as e:
     print(f"[DongDongTarot] DB init warning: {e}")
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-
-# CORS 配置
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # 注册 API 路由
 app.include_router(auth.router)
