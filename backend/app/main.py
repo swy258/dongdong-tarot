@@ -1,9 +1,9 @@
 """FastAPI 主入口"""
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 
 from app.database import engine, Base, SessionLocal
 from app.models import User, Card, Spread, Reading
@@ -17,7 +17,6 @@ def init_db():
 
     db = SessionLocal()
     try:
-        # 检查是否已初始化
         card_count = db.query(Card).count()
         if card_count == 0:
             print("Seeding 78 tarot cards...")
@@ -52,9 +51,7 @@ try:
 except Exception as e:
     print(f"[DongDongTarot] DB init warning: {e}")
 
-# 静态文件目录
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-
 
 # CORS 配置
 app.add_middleware(
@@ -64,25 +61,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# SPA 中间件：404 时返回静态文件或 index.html（不干扰 API 路由）
-@app.middleware("http")
-async def spa_fallback(request: Request, call_next):
-    response = await call_next(request)
-    # 只处理 GET 请求的 404（跳过 API 路径）
-    if response.status_code == 404 and request.method == "GET":
-        path = request.url.path.lstrip("/")
-        # 先尝试匹配静态文件
-        file_path = os.path.join(STATIC_DIR, path)
-        if path and os.path.isfile(file_path):
-            return FileResponse(file_path)
-        # SPA fallback：返回 index.html
-        index_path = os.path.join(STATIC_DIR, "index.html")
-        if os.path.isfile(index_path):
-            return FileResponse(index_path)
-    return response
-
 
 # 注册 API 路由
 app.include_router(auth.router)
@@ -98,7 +76,6 @@ def health_check():
 
 @app.get("/")
 async def root():
-    """首页 - 返回前端 index.html"""
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.isfile(index_path):
         return FileResponse(index_path)
