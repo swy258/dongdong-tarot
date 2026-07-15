@@ -10,32 +10,42 @@ from app.routers import auth, cards, spreads, readings
 from app.services.seed_data import get_card_seed_data, get_preset_spreads
 
 
-def init_db():
-    """初始化数据库：建表 + 种子数据"""
-    Base.metadata.create_all(bind=engine)
+DB_INITIALIZED = False
+DB_FILE = os.path.join(os.path.dirname(__file__), "..", "dongdong_tarot.db")
 
+
+def init_db():
+    """初始化数据库：建表 + 种子数据（幂等）"""
+    global DB_INITIALIZED
+    import time
+    t0 = time.time()
+
+    # 快速路径：数据库文件已存在且已初始化
+    if DB_INITIALIZED:
+        return
+    if os.path.exists(DB_FILE):
+        DB_INITIALIZED = True
+        return
+
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         card_count = db.query(Card).count()
         if card_count == 0:
-            print("Seeding 78 tarot cards...")
             for card_data in get_card_seed_data():
-                card = Card(**card_data)
-                db.add(card)
+                db.add(Card(**card_data))
             db.commit()
-            print("78 cards seeded successfully.")
 
         spread_count = db.query(Spread).filter(Spread.is_preset == True).count()
         if spread_count == 0:
-            print("Seeding preset spreads...")
             for spread_data in get_preset_spreads():
-                spread = Spread(**spread_data)
-                db.add(spread)
+                db.add(Spread(**spread_data))
             db.commit()
-            print("Preset spreads seeded successfully.")
-
     finally:
         db.close()
+
+    DB_INITIALIZED = True
+    print(f"[DongDongTarot] DB init done in {time.time() - t0:.2f}s")
 
 
 app = FastAPI(
@@ -44,7 +54,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# WSGI 模式下 lifespan 不会触发，在模块加载时初始化数据库
 try:
     init_db()
 except Exception as e:
