@@ -81,18 +81,31 @@ def health_check():
     return {"status": "ok", "message": "东东塔罗服务运行正常"}
 
 
-# 前端静态文件
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(STATIC_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
-    app.mount("/favicon.svg", StaticFiles(directory=STATIC_DIR), name="favicon")
+# 前端静态文件 - 多路径兜底
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(_current_dir, "static")
+# PythonAnywhere 环境下尝试其他路径
+for alt in [
+    os.path.join(os.path.dirname(_current_dir), "app", "static"),
+    os.path.join(os.path.dirname(os.path.dirname(_current_dir)), "backend", "app", "static"),
+]:
+    if not os.path.exists(STATIC_DIR) and os.path.exists(alt):
+        STATIC_DIR = alt
 
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        # 所有非API路由返回 index.html（SPA）
-        file_path = os.path.join(STATIC_DIR, full_path) if full_path else ""
-        if full_path and os.path.exists(file_path) and not os.path.isdir(file_path):
-            return FileResponse(file_path)
+if os.path.exists(STATIC_DIR) and os.path.exists(os.path.join(STATIC_DIR, "index.html")):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+
+    # 非API请求返回SPA入口
+    @app.middleware("http")
+    async def spa_fallback(request, call_next):
+        # API路由正常处理
+        if request.url.path.startswith("/api/"):
+            return await call_next(request)
+        # 静态资源
+        static_file = os.path.join(STATIC_DIR, request.url.path.lstrip("/"))
+        if os.path.isfile(static_file):
+            return FileResponse(static_file)
+        # SPA fallback
         return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 else:
     @app.get("/")
