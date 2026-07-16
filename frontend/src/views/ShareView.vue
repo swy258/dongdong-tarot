@@ -62,7 +62,6 @@ const generateShareImage = async () => {
   generating.value = true
   try {
     await nextTick()
-    // Scroll card into view for mobile
     shareCardRef.value.scrollIntoView({ behavior: 'instant', block: 'start' })
     const isMobile = window.innerWidth < 640
     const canvas = await html2canvas(shareCardRef.value, {
@@ -75,6 +74,7 @@ const generateShareImage = async () => {
     generatedImage.value = canvas.toDataURL('image/png')
   } catch (err) {
     alert('图片生成失败：' + err.message)
+    console.error('html2canvas error:', err)
   } finally {
     generating.value = false
   }
@@ -402,6 +402,7 @@ const parseSummaryCards = (text) => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: #c084fc; /* fallback for html2canvas */
   margin-bottom: 6px;
 }
 .share-subtitle {
@@ -689,9 +690,7 @@ const parseSummaryCards = (text) => {
 /* ====== 自由排布 ====== */
 .layout-free {
   position: relative; width: 100%; aspect-ratio: 1.6;
-  background:
-    radial-gradient(circle, rgba(192,132,252,0.04) 1px, transparent 1px);
-  background-size: 18px 18px;
+  background: rgba(192,132,252,0.02);
   border: 1px solid rgba(192,132,252,0.08); border-radius: 10px;
   margin: 4px 0;
 }
