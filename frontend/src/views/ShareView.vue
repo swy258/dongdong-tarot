@@ -62,9 +62,12 @@ const generateShareImage = async () => {
   generating.value = true
   try {
     await nextTick()
+    // Scroll card into view for mobile
+    shareCardRef.value.scrollIntoView({ behavior: 'instant', block: 'start' })
+    const isMobile = window.innerWidth < 640
     const canvas = await html2canvas(shareCardRef.value, {
       backgroundColor: '#0f0f1a',
-      scale: 2,
+      scale: isMobile ? 1.5 : 2,
       useCORS: true,
       allowTaint: true,
       logging: false,
@@ -344,7 +347,8 @@ const parseSummaryCards = (text) => {
 <style scoped>
 /* ====== 卡片整体 ====== */
 .share-card {
-  width: 600px;
+  max-width: 600px;
+  width: 100%;
   margin: 0 auto;
   background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
   border-radius: 16px;
@@ -786,5 +790,69 @@ const parseSummaryCards = (text) => {
   text-align: center;
   padding: 80px 0;
   color: var(--text-secondary);
+}
+
+/* ====== Mobile responsive ====== */
+@media (max-width: 640px) {
+  .share-card-header { padding: 20px 16px 14px; }
+  .share-card-header h1 { font-size: 22px; }
+  .share-logo { font-size: 36px; }
+  .share-section { padding: 12px 16px; gap: 10px; }
+  .section-icon { font-size: 18px; }
+  .share-question-text { font-size: 14px; }
+  .share-cards-section { padding: 12px 16px 6px; }
+  .share-cards-grid { gap: 6px; }
+  .dc-name { font-size: 11px; }
+  .dc-pos { font-size: 9px; }
+  .dc-dir { font-size: 9px; padding: 1px 6px; }
+
+  /* Timeline: smaller cards, arrow adjustment */
+  .tl-card { padding: 10px 12px; min-width: 50px; }
+  .tl-name { font-size: 12px; }
+  .tl-card:not(:last-child)::after { right: -14px; font-size: 14px; }
+
+  /* Stack: max-width 100% */
+  .stack-card { max-width: 100%; padding: 10px 16px; gap: 8px; }
+  .sk-pos { font-size: 10px; min-width: 40px; }
+  .sk-name { font-size: 12px; }
+
+  /* Branch: stack vertically */
+  .branch-split { flex-direction: column; align-items: center; gap: 10px; }
+  .branch-arm.left { border-right: none; padding-right: 0; border-bottom: 2px solid rgba(192,132,252,0.2); padding-bottom: 10px; }
+  .branch-arm.right { border-left: none; padding-left: 0; border-top: 2px solid rgba(192,132,252,0.2); padding-top: 10px; }
+
+  /* Celtic Cross: compact */
+  .celtic-cross-layout { flex-direction: column; gap: 12px; }
+  .cross-cell, .cross-top, .cross-bottom { padding: 8px 10px; font-size: 11px; min-width: 45px; }
+  .cross-x { left: calc(50% - 25px); padding: 4px 10px; font-size: 10px; }
+  .staff-area { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .staff-cell { padding: 6px 10px; min-width: 50px; }
+  .st-name { font-size: 11px; }
+
+  /* Hexagram: smaller grid */
+  .hex-center { padding: 10px 20px; font-size: 12px; }
+  .hex-cell { padding: 8px 10px; font-size: 11px; }
+  .hex-ring { gap: 4px; }
+
+  /* Relationship: compact */
+  .rel-card { padding: 10px 16px; min-width: 60px; }
+  .rel-details { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .rc-name { font-size: 11px; }
+
+  /* Free layout: smaller aspect ratio */
+  .layout-free { aspect-ratio: 1.2; }
+  .layout-free .free-card { padding: 4px 7px; min-width: 40px; }
+  .fcp-name { font-size: 10px; }
+
+  /* Summary cards: reduced padding */
+  .share-section-col { padding: 12px 16px 6px; }
+  .summary-card { padding: 10px 14px; }
+  .sc-text { font-size: 12px; }
+
+  /* Footer */
+  .share-footer { padding: 14px 16px 18px; }
+
+  /* Watermark: smaller */
+  .share-card-watermark { font-size: 70px; letter-spacing: 10px; }
 }
 </style>
